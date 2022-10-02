@@ -1,0 +1,162 @@
+build_models<-eventReactive(input$buttontrain,{
+      req(input$files_rows_selected)
+       dates_first<-create_ts_train()
+       
+       #Одиночные модели
+       if("Модель Хольта-Винтерса" %in% input$models)
+       {
+         tsDataHW_tsred <<- HoltWinters(tsData_train_tsred)
+         tsDataHW_ocad <<- HoltWinters(tsData_train_ocad)
+         
+         tsData_train$HW_tsred<-tsDataHW_tsred
+         tsData_train$HW_ocad<-tsDataHW_ocad
+         print("Модель Хольта-Винтерса успешно построена")
+       }
+       if("Модель ARIMA" %in% input$models)
+       {
+         tsDataArima_tsred<<-stlf(tsData_train_tsred, method="arima")
+         tsDataArima_ocad<<-stlf(tsData_train_ocad, method="arima")
+         
+         tsData_train$AR_tsred<-tsDataArima_tsred
+         tsData_train$AR_ocad<-tsDataArima_ocad
+         print("Модель ARIMA успешно построена")
+       }
+       if("Модель MLP" %in% input$models)
+       {
+         tsDataMLP_tsred<<-mlp(tsData_train_tsred, lags=1:32, sel.lag=FALSE)
+         tsDataMLP_ocad<<-mlp(tsData_train_ocad, hd=2, lags=1:32, sel.lag=FALSE)
+         
+         tsData_train$MLP_tsred<-tsDataMLP_tsred
+         tsData_train$MLP_ocad<-tsDataMLP_ocad
+         print("Модель MLP успешно построена")
+       }
+       if("Модель NNAR" %in% input$models)
+       {
+         tsDataNNETAR_tsred <<- nnetar(tsData_train_tsred)
+         tsDataNNETAR_ocad <<- nnetar(tsData_train_ocad)
+         
+         tsData_train$NNAR_tsred<-tsDataNNETAR_tsred
+         tsData_train$NNAR_ocad<-tsDataNNETAR_ocad
+         print("Модель NNAR успешно построена")
+       }
+       if("Модель LSTM" %in% input$models)
+       {
+         
+         LSTMt<<-lstm_train(tsData_train_tsred, dates_first$y_date_first_train,dates_first$m_date_first_train,dates_first$d_date_first_train)
+         LSTMo<<-lstm_train(tsData_train_ocad,dates_first$y_date_first_train,dates_first$m_date_first_train,dates_first$d_date_first_train)
+         
+         tsDataLSTM_tsred<<-LSTMt$tsD
+         tsDataLSTM_ocad<<-LSTMo$tsD
+         
+         model_LSTM_tsred<<-LSTMt$model_train
+         model_LSTM_ocad<<-LSTMo$model_train
+         
+         tsData_train$LSTM_tsred<-tsDataLSTM_tsred
+         tsData_train$LSTM_ocad<-tsDataLSTM_ocad
+         
+         print("Модель LSTM успешно построена")
+       }
+       
+       date_first_train<-input$train[1]
+       y_date_first_train<-year(date_first_train)
+       m_date_first_train<-month(date_first_train)
+       d_date_first_train<-day(date_first_train)
+       tsred_train<-tsData_train_tsred[(length(tsData_train_tsred)-365):length(tsData_train_tsred)]
+       
+       X_tsred<-NULL
+       X_ocad<-NULL
+       
+       #Ансамблевые модели
+       if("Модель полиминиальной агрегации" %in% input$models_ensemble_mpol)
+       {
+         if("Модель Хольта-Винтерса" %in% input$models_one_mpol)
+         {
+           X_tsred <- cbind(X_tsred,fitted(tsDataHW_tsred)[,1])
+           X_ocad <- cbind(X_ocad,fitted(tsDataHW_ocad)[,1])
+         }
+         if("Модель ARIMA" %in% input$models_one_mpol)
+         {
+           X_tsred <- cbind(X_tsred,tsDataArima_tsred$fitted)
+           X_ocad <- cbind(X_ocad,tsDataArima_ocad$fitted)
+         }
+         if("Модель MLP" %in% input$models_one_mpol)
+         {
+           X_tsred <- cbind(X_tsred,tsDataMLP_tsred$fitted)
+           X_ocad <- cbind(X_ocad,tsDataMLP_ocad$fitted)
+         }
+         if("Модель NNAR" %in% input$models_one_mpol)
+         {
+           X_tsred <- cbind(X_tsred,tsDataNNETAR_tsred$fitted)
+           X_ocad <- cbind(X_ocad,tsDataNNETAR_ocad$fitted)
+         }
+         if("Модель LSTM" %in% input$models_one_mpol)
+         {
+           X_tsred <- cbind(X_tsred,tsDataLSTM_tsred)
+           X_ocad <- cbind(X_ocad,tsDataLSTM_ocad)
+           
+         }
+         
+         MLPol0 <- mixture(model = "MLpol", loss.type = "square")
+         weights_train <- predict(MLPol0, X_tsred, tsData_train_tsred, type='weights')
+         tsDataMPol_tsred <<- ts(predict(MLPol0, X_tsred, tsData_train_tsred, type='response'), start=c(y_date_first_train,m_date_first_train,d_date_first_train), freq=365)
+         
+         MLPol0 <- mixture(model = "MLpol", loss.type = "square")
+         weights_train <- predict(MLPol0, X_ocad, tsData_train_ocad, type='weights')
+         tsDataMPol_ocad <<- ts(predict(MLPol0, X_ocad, tsData_train_ocad, type='response'), start=c(y_date_first_train,m_date_first_train,d_date_first_train), freq=365)
+         
+         
+         tsData_train$MPol_tsred<-tsDataMPol_tsred
+         tsData_train$MPol_ocad<-tsDataMPol_ocad
+         print("Модель MPol успешно построена")
+       }
+       
+       X_tsred1<-NULL
+       X_ocad1<-NULL
+       if("Модель усреднения" %in% input$models_ensemble_avg)
+       {
+         if("Модель Хольта-Винтерса" %in% input$models_one_avg)
+         {
+           X_tsred1 <- cbind(X_tsred1,fitted(tsDataHW_tsred)[,1])
+           X_ocad1 <- cbind(X_ocad1,fitted(tsDataHW_ocad)[,1])
+         }
+         if("Модель ARIMA" %in% input$models_one_avg)
+         {
+           X_tsred1 <- cbind(X_tsred1,tsDataArima_tsred$fitted)
+           X_ocad1 <- cbind(X_ocad1,tsDataArima_ocad$fitted)
+         }
+         if("Модель MLP" %in% input$models_one_avg)
+         {
+           X_tsred1 <- cbind(X_tsred1,tsDataMLP_tsred$fitted)
+           X_ocad1 <- cbind(X_ocad1,tsDataMLP_ocad$fitted)
+         }
+         if("Модель NNAR" %in% input$models_one_avg)
+         {
+           X_tsred1 <- cbind(X_tsred1,tsDataNNETAR_tsred$fitted)
+           X_ocad1 <- cbind(X_ocad1,tsDataNNETAR_ocad$fitted)
+         }
+         if("Модель LSTM" %in% input$models_one_avg)
+         {
+           X_tsred1 <- cbind(X_tsred1,tsDataLSTM_tsred)
+           X_ocad1 <- cbind(X_ocad1,tsDataLSTM_ocad)
+           
+         }
+         
+         sum_tsData_tsred<-X_tsred1[,1]
+         for(k in 2:ncol(X_tsred1))
+         {
+           sum_tsData_tsred<-sum_tsData_tsred+X_tsred1[,k]
+         }
+         tsDataAVG_tsred<<-(1/(ncol(X_tsred1)))*sum_tsData_tsred
+         
+         sum_tsData_ocad<-X_ocad1[,1]
+         for(k in 2:ncol(X_ocad1))
+         {
+           sum_tsData_ocad<-sum_tsData_ocad+X_ocad1[,k]
+         }
+         tsDataAVG_ocad<<-(1/(ncol(X_tsred1)))*sum_tsData_ocad
+         
+         tsData_train$AVG_tsred<-tsDataAVG_tsred
+         tsData_train$AVG_ocad<-tsDataAVG_ocad
+         print("Модель AVG успешно построена")
+      }
+    })
