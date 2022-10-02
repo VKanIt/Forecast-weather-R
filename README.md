@@ -8,17 +8,17 @@ Weather data for the last 60 years (1971 – 2022) for each weather station of t
 
 # Requirement
 
-R: 4.1.3
-
+R: 4.1.3 <br>
 Packages: tsibble, opera, NlcOptim, Metrics, nnfor, forecast, tseries, lubridate, mixture, smooth, tsfgrnn, shiny, keras, tensorflow, XML,
-          RCurl, timeperiodsR, vroom, tools, shinycssloaders, colourpicker, leaflet, shinytitle, plyr, stringr, reader, DT, tidyverse, reticulate, glue, httr, RSQLite
+          RCurl, timeperiodsR, vroom, tools, shinycssloaders, colourpicker, leaflet, shinytitle, plyr, stringr, reader, DT, tidyverse, 
+          reticulate, glue, httr, RSQLite
           
 # Models
 
-Autoregression — moving average method (ARIMA) 
-Holt-Winters method
-Multilayer perceptron method (MLP)
-Neural network autoregression method (NNAR)
-Neural network method with long-term short-term memory (LSTM)
-Method of polynomial potential aggregation
-Averaging method
+Autoregression — moving average method (ARIMA) <br>
+Holt-Winters method<br>
+Multilayer perceptron method (MLP)<br>
+Neural network autoregression method (NNAR)<br>
+Neural network method with long-term short-term memory (LSTM)<br>
+Method of polynomial potential aggregation<br>
+Averaging method<br>
