@@ -8,8 +8,8 @@ Weather data for the last 60 years (1971 – 2022) for each weather station of t
 
 # Requirement
 
-R: 4.1.3
-Packages: tsibble, opera, NlcOptim, Metrics, nnfor, forecast, tseries, lubridate, mixture, smooth, tsfgrnn, shiny, keras, tensorflow, XML,
+#R: 4.1.3
+#Packages: tsibble, opera, NlcOptim, Metrics, nnfor, forecast, tseries, lubridate, mixture, smooth, tsfgrnn, shiny, keras, tensorflow, XML,
           RCurl, timeperiodsR, vroom, tools, shinycssloaders, colourpicker, leaflet, shinytitle, plyr, stringr, reader, DT, tidyverse, reticulate, glue, httr, RSQLite
           
 # Models
