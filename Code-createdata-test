@@ -1,0 +1,31 @@
+create_ts_test<-function(){
+      tsData_tsred <- data_global[,4]
+      tsData_ocad <- data_global[,7]
+      
+      date_first_test<-input$test[1]
+      date_second_test<-input$test[2]
+
+      y_date_first_test<-year(date_first_test)
+      m_date_first_test<-month(date_first_test)
+      d_date_first_test<-day(date_first_test)
+      
+      nrow_date_first_test<-which(data_global$year == y_date_first_test & 
+                                    data_global$month == m_date_first_test & data_global$day == d_date_first_test)
+      
+      y_date_second_test<-year(date_second_test)
+      m_date_second_test<-month(date_second_test)
+      d_date_second_test<-day(date_second_test)
+      
+      nrow_date_second_test<-which(data_global$year == y_date_second_test & 
+                                     data_global$month == m_date_second_test & data_global$day == d_date_second_test)
+      
+      tsData_test_tsred<<-tsData_tsred[c(nrow_date_first_test:nrow_date_second_test)]   # 2021 - 2022 РіРі
+      tsData_test_ocad<<-tsData_ocad[c(nrow_date_first_test:nrow_date_second_test)]
+      
+      tsData_test_tsred<<- ts(tsData_test_tsred, frequency=365, start=c(y_date_first_test,m_date_first_test,d_date_first_test))
+      tsData_test_ocad<<- ts(tsData_test_ocad, frequency=365, start=c(y_date_first_test,m_date_first_test,d_date_first_test))
+      
+      tsData_test$tsred<-tsData_test_tsred
+      tsData_test$ocad<-tsData_test_ocad
+      
+    }
