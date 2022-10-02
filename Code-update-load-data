@@ -1,0 +1,158 @@
+//--------Update data----------//
+
+observeEvent(input$update,
+    {
+      req(input$checked_rows)
+      check<-as.numeric(input$checked_rows)
+      
+      sqlitePath <-paste(getwd(),"/weather.db", sep="")
+      con <- dbConnect(SQLite(), sqlitePath)
+
+      list_tables<-dbListTables(con)
+            
+      checkedtable_name<-list_tables[check]
+      print$s<-"Обновлены таблицы для городов: "
+      
+        for(i in 1:length(checkedtable_name))
+        {
+          town_name<-checkedtable_name[i]
+        data2<-dbReadTable(con, town_name)
+        date_current<-today()
+        
+        y_cur<-year(date_current)
+        m_cur<-month(date_current)
+        d_cur<-day(date_current)
+        
+        y_last<-data2[nrow(data2),1]
+        m_last<-data2[nrow(data2),2]
+        d_last<-data2[nrow(data2),3]
+        
+        s<-paste(data2[nrow(data2),1],data2[nrow(data2),2],data2[nrow(data2),3])
+        date_last<-ymd(s)
+        
+        if((date_current-1)!=date_last)
+          {
+        if(!is.na(str_extract(town_name, "Новосибирск")) || !is.na(str_extract(town_name, "Татарск")) || !is.na(str_extract(town_name, "Барабинск")) || !is.na(str_extract(town_name, "Северное")))
+        {
+          
+        if(d_cur==1)
+          page <- paste("http://www.pogodaiklimat.ru/monitor.php?id=",id_town(town_name),"&month=",m_cur-1,"&year=",y_cur,sep="")
+        else
+          page <- paste("http://www.pogodaiklimat.ru/monitor.php?id=",id_town(town_name),"&month=",m_cur,"&year=",y_cur,sep="")
+        tab <- readHTMLTable(rawToChar(GET(page)$content),which=1)
+        tab<-tab[tab$V2!="" & tab$V3!=""  & tab$V4!=""  & tab$V5!=""  & tab$V6!="",]
+        
+        if(d_cur==1)
+          s<-paste(y_cur,m_cur-1,tab[nrow(tab),1])
+        else
+          s<-paste(y_cur,m_cur,tab[nrow(tab),1])
+        date_current<-ymd(s)
+
+        count_day<-date_current-date_last
+        list_year<-c(1:count_day)
+        list_month<-c(1:count_day)
+        list_days<-c(1:count_day)
+        
+        dates<-data.frame(list_year,list_month,list_days)
+        
+        m_date<-""
+        df=data.frame()
+        for(i in 1:count_day)
+          {
+            date<-date_last+i
+            dates$list_year[i]<-as.numeric(year(date))
+            dates$list_month[i]<-as.numeric(month(date))
+            dates$list_days[i]<-as.numeric(day(date))
+            if(m_date!=month(date)){
+                page <- paste("http://www.pogodaiklimat.ru/monitor.php?id=",id_town(town_name),"&month=",month(date),"&year=",year(date),sep="")
+                print(page)
+                m_date<-month(date)
+                tables <- readHTMLTable(rawToChar(GET(page)$content))
+                df1<-tables[[1]]
+                df1<-df1[2:nrow(df1),]
+                df1<-df1[df1$V2!="" & df1$V3!=""  & df1$V4!=""  & df1$V5!=""  & df1$V6!="",]
+                
+                df<-join(df, df1,type = "full")
+            }
+          }
+        
+        dfdif<-df[dates$list_days[1]:nrow(df),]
+        dates<-dates[1:nrow(dfdif),]
+        
+        data1<-data.frame(dates$list_year,dates$list_month,dfdif$V1,dfdif$V3,dfdif$V2,dfdif$V4,dfdif$V6)
+        names(data1)[names(data1) == 'dates.list_year'] <- 'year'
+        names(data1)[names(data1) == 'dates.list_month'] <- 'month'
+        names(data1)[names(data1) == 'dfdif.V1'] <- 'day'
+        names(data1)[names(data1) == 'dfdif.V3'] <- 'Tsred'
+        names(data1)[names(data1) == 'dfdif.V2'] <- 'Tmin'
+        names(data1)[names(data1) == 'dfdif.V4'] <- 'Tmax'
+        names(data1)[names(data1) == 'dfdif.V6'] <- 'ocadsum'
+        
+        
+        data2<-rbind(data2, data1)
+        data2$Tsred<-as.numeric(data2$Tsred)
+        data2$Tmin<-as.numeric(data2$Tmin)
+        data2$Tmax<-as.numeric(data2$Tmax)
+        data2$ocadsum<-as.numeric(data2$ocadsum)
+        
+        }
+        else
+        {
+          count_day<-date_current-date_last
+          
+          listdate<-seq(date_last,by='days',length=count_day)
+          tabfull<-data.frame()
+          for(i in 1:length(listdate))
+          {
+            
+            y<-year(listdate[i])
+            m<-month(listdate[i])
+            d<-day(listdate[i])
+            
+          page <- paste("http://www.pogodaiklimat.ru/weather.php?id=",id_town(town_name),"&bday=",d,"&fday=",d,"&amonth=",m,"&ayear=",y,"&bot=2",sep="")
+          tab <- readHTMLTable(rawToChar(GET(page)$content),which=2)
+          n<-tab$V6[tab$V6!=""]
+          Tsred<-sum(as.numeric(n))/length(n)
+          Min<-tab$V14[tab$V14!=""]
+          Tmin<-min(as.numeric(Min))
+          Max<-tab$V15[tab$V15!=""]
+          Tmax<-max(as.numeric(Max))
+          n1<-tab$V16[tab$V16!=""]
+          ocadsum<-sum(as.numeric(n1))
+          
+          tb=data.frame(year=y, month=m, day=d, Tsred=round(Tsred, 2), Tmin=Tmin, Tmax=Tmax, ocadsum=ocadsum)
+          
+          tabfull<-join(tabfull, tb,type = "full")
+          }
+          
+          data2<-rbind(data2, tabfull)
+          
+        }
+        }
+        dbRemoveTable(con, town_name)
+        dbWriteTable(con, town_name, data2, append = TRUE,row.names =FALSE)
+        
+        t$d[i]<-paste(data2$year[nrow(data2)],"-",data2$month[nrow(data2)],"-",data2$day[nrow(data2)], sep="")
+        print(paste("Обновлены таблицы для городов:", town_name))
+        
+        print$s<-paste(print$s, town_name, sep="\n")
+        }
+      dbDisconnect(con)
+    })
+
+//--------Load data----------//
+
+    observe({
+      req(input$files_rows_selected)
+      sqlitePath <-paste(getwd(),"/weather.db", sep="")
+      con <- dbConnect(SQLite(), sqlitePath)
+      list_tables<-dbListTables(con)
+      for(i in 1:length(list_tables))
+      {
+        if(input$files_rows_selected==i)
+          data2<-dbReadTable(con, list_tables[i])
+      }
+      dbDisconnect(con)
+      tabledata1$d1<-data2
+      data_global<<-data2
+    })
