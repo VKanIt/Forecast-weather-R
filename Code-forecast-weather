@@ -1,0 +1,116 @@
+modelsforecast<-eventReactive(input$buttonforecast,{
+      req(input$files_rows_selected)
+      create_ts_test()
+      date_first<-input$test[1]
+      date_second<-input$test[2]
+      h=as.numeric(date_second-date_first)+1
+      
+      #Одиночные модели
+      if("Модель Хольта-Винтерса" %in% input$models_forecast)
+      {
+        holtWintersModelForecast_tsred <<- forecast::forecast(tsDataHW_tsred, h = h)
+        holtWintersModelForecast_ocad <<- forecast::forecast(tsDataHW_ocad, h = h)
+        
+        tsData_test$HW_tsred<-holtWintersModelForecast_tsred
+        tsData_test$HW_ocad<-holtWintersModelForecast_ocad
+        print("Прогноз по модели Хольта-Винтерса успешно построен")
+      }
+      if("Модель ARIMA" %in% input$models_forecast)
+      {
+        ArimaModelForecast_tsred <<- forecast::forecast(tsDataArima_tsred, h = h)
+        ArimaModelForecast_ocad <<- forecast::forecast(tsDataArima_ocad, h = h)
+        
+        tsData_test$AR_tsred<-ArimaModelForecast_tsred
+        tsData_test$AR_ocad<-ArimaModelForecast_ocad
+        print("Прогноз по модели ARIMA успешно построен")
+      }
+      if("Модель MLP" %in% input$models_forecast)
+      {
+        MlpModelForecast_tsred <<- forecast(tsDataMLP_tsred, h = h)
+        MlpModelForecast_ocad <<- forecast(tsDataMLP_ocad, h = h)
+        
+        tsData_test$MLP_tsred<-MlpModelForecast_tsred
+        tsData_test$MLP_ocad<-MlpModelForecast_ocad
+        print("Прогноз по модели MLP успешно построен")
+      }
+      if("Модель NNAR" %in% input$models_forecast)
+      {
+        NnetarModelForecast_tsred <<- forecast::forecast(tsDataNNETAR_tsred, h = h)
+        NnetarModelForecast_ocad <<- forecast::forecast(tsDataNNETAR_ocad, h = h)
+        
+        tsData_test$NNAR_tsred<-NnetarModelForecast_tsred
+        tsData_test$NNAR_ocad<-NnetarModelForecast_ocad
+        print("Прогноз по модели NNAR успешно построен")
+      }
+      if("Модель LSTM" %in% input$models_forecast)
+      {
+        LstmModelForecast_tsred<<-lstm_test(model_LSTM_tsred,tsData_train_tsred, tsData_test_tsred, year(date_first),month(date_first),day(date_first))
+        LstmModelForecast_ocad<<-lstm_test(model_LSTM_ocad, tsData_train_ocad, tsData_test_ocad, year(date_first),month(date_first),day(date_first))
+        
+        tsData_test$LSTM_tsred<-LstmModelForecast_tsred
+        tsData_test$LSTM_ocad<-LstmModelForecast_ocad
+        print("Прогноз по модели LSTM успешно построен")
+      }
+      
+      #Ансамблевые модели
+      if("Модель полиминиальной агрегации" %in% input$models_forecast)
+      {
+        MPolModelForecast_tsred <<- forecast::forecast(tsDataMPol_tsred, h = h)
+        MPolModelForecast_ocad <<- forecast::forecast(tsDataMPol_ocad, h = h)
+        
+        tsData_test$MPol_tsred<-MPolModelForecast_tsred
+        tsData_test$MPol_ocad<-MPolModelForecast_ocad
+        print("Прогноз по модели MPol успешно построен")
+      }
+      
+      X_tsred<-NULL
+      X_ocad<-NULL
+      
+      if("Модель усреднения" %in% input$models_forecast)
+      {
+        if(!(is.null(holtWintersModelForecast_tsred)) & !(is.null(holtWintersModelForecast_ocad)))
+        {
+          X_tsred <- cbind(X_tsred,holtWintersModelForecast_tsred$mean)
+          X_ocad <- cbind(X_ocad,holtWintersModelForecast_ocad$mean)
+        }
+        if(!(is.null(ArimaModelForecast_tsred)) & !(is.null(ArimaModelForecast_ocad)))
+        {
+          X_tsred <- cbind(X_tsred,ArimaModelForecast_tsred$mean)
+          X_ocad <- cbind(X_ocad,ArimaModelForecast_ocad$mean)
+        }
+        if(!(is.null(MlpModelForecast_tsred)) & !(is.null(MlpModelForecast_ocad)))
+        {
+          X_tsred <- cbind(X_tsred,MlpModelForecast_tsred$mean)
+          X_ocad <- cbind(X_ocad,MlpModelForecast_ocad$mean)
+        }
+        if(!(is.null(NnetarModelForecast_tsred)) & !(is.null(NnetarModelForecast_ocad)))
+        {
+          X_tsred <- cbind(X_tsred,NnetarModelForecast_tsred$mean)
+          X_ocad <- cbind(X_ocad,NnetarModelForecast_ocad$mean)
+        }
+        if(!(is.null(LstmModelForecast_tsred)) & !(is.null(LstmModelForecast_ocad)))
+        {
+          X_tsred <- cbind(X_tsred,LstmModelForecast_tsred)
+          X_ocad <- cbind(X_ocad,LstmModelForecast_ocad)
+          
+        }
+        
+        sum_tsData_tsred<-X_tsred[,1]
+        for(k in 2:ncol(X_tsred))
+        {
+          sum_tsData_tsred<-sum_tsData_tsred+X_tsred[,k]
+        }
+        AVGModelForecast_tsred<<-(1/(ncol(X_tsred)))*sum_tsData_tsred
+        
+        sum_tsData_ocad<-X_ocad[,1]
+        for(k in 2:ncol(X_ocad))
+        {
+          sum_tsData_ocad<-sum_tsData_ocad+X_ocad[,k]
+        }
+        AVGModelForecast_ocad<<-(1/(ncol(X_tsred)))*sum_tsData_ocad
+        
+        tsData_test$AVG_tsred<-AVGModelForecast_tsred
+        tsData_test$AVG_ocad<-AVGModelForecast_ocad
+        print("Прогноз по модели AVG успешно построен")
+      }
+    })
