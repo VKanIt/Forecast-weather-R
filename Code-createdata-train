@@ -1,0 +1,33 @@
+create_ts_train<-function(){
+      tsData_tsred <- data_global[,4]
+      tsData_ocad <- data_global[,7]
+      
+      date_first_train<-input$train[1]
+      date_second_train<-input$train[2]
+      
+      y_date_first_train<-year(date_first_train)
+      m_date_first_train<-month(date_first_train)
+      d_date_first_train<-day(date_first_train)
+      
+      nrow_date_first_train<-which(data_global$year == y_date_first_train & 
+                                     data_global$month == m_date_first_train & data_global$day == d_date_first_train)
+      
+      y_date_second_train<-year(date_second_train)
+      m_date_second_train<-month(date_second_train)
+      d_date_second_train<-day(date_second_train)
+      
+      nrow_date_second_train<-which(data_global$year == y_date_second_train & 
+                                     data_global$month == m_date_second_train & data_global$day == d_date_second_train)
+      
+      tsData_train_tsred<<-tsData_tsred[c(nrow_date_first_train:nrow_date_second_train)] # 2019 - 2021 РіРі
+      tsData_train_ocad<<-tsData_ocad[c(nrow_date_first_train:nrow_date_second_train)]
+ 
+      tsData_train_tsred<<- ts(tsData_train_tsred, frequency=365, start=c(y_date_first_train,m_date_first_train,d_date_first_train))
+      tsData_train_ocad<<- ts(tsData_train_ocad, frequency=365, start=c(y_date_first_train,m_date_first_train,d_date_first_train))
+      
+      tsData_train$tsred<-tsData_train_tsred
+      tsData_train$ocad<-tsData_train_ocad
+      
+      out<-list(y_date_first_train=y_date_first_train,m_date_first_train=m_date_first_train,d_date_first_train=d_date_first_train)
+      return(out)
+    }
